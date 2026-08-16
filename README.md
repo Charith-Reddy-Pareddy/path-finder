@@ -90,11 +90,3 @@ the destination is popped. `RoadNetwork` includes a few one-way streets
 specifically so the shortest path can differ depending on direction of
 travel — a plain undirected shortest-path search wouldn't reproduce it.
 
-## Notes to grader (original assignment)
-
-- Name: Charith Reddy Pareddy — CS400, Group P2.2602, Lecture 002.
-- `DijkstraGraph.computeShortestPath` implements the pseudocode from
-  lecture. Everything outside `src/{MapADT,PlaceholderMap,GraphADT,
-  BaseGraph,DijkstraGraph}.java` (the HTTP server, road network data,
-  frontend, and integration tests) was added afterward to turn the
-  assignment into a working application.
