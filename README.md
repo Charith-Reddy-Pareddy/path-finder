@@ -1,0 +1,95 @@
+# Path Finder
+
+A route-planning web app: pick a start and end intersection in a small
+sample road network and get the shortest route, computed with Dijkstra's
+algorithm. Originally a UW-Madison CS400 (data structures) assignment
+implementing a generic weighted directed graph — this repo wraps that
+graph engine in a real Java HTTP backend and a browser frontend so it
+actually behaves like a route planner instead of just a test fixture.
+
+## Tech stack
+
+| Layer | Tech |
+|---|---|
+| Graph engine | Java 21 — generic `DijkstraGraph<NodeType, EdgeType>` over a custom hash-map ADT |
+| Backend | Java's built-in `com.sun.net.httpserver` (no framework), plain JSON over HTTP |
+| Frontend | HTML, CSS, vanilla JavaScript — fetches the API, renders an interactive SVG map |
+| Testing | JUnit 5 — unit tests for the algorithm, integration tests that drive the real HTTP server end-to-end |
+| Build | `make` — compiles, downloads the JUnit console launcher, runs tests, runs the app |
+
+## Running it
+
+Requires a JDK (21+) and `make`.
+
+```bash
+make run
+```
+
+Then open [http://localhost:8080](http://localhost:8080). Pick a start
+and end intersection and click **Find shortest route** — the map
+highlights the path and the panel lists each leg's distance.
+
+Port is configurable via `PORT` (defaults to 8080):
+
+```bash
+PORT=9000 make run
+```
+
+## Testing
+
+```bash
+make test
+```
+
+This compiles everything, downloads the JUnit Platform Console Standalone
+launcher into `lib/` on first run (cached after that), and runs the full
+suite: unit tests for `DijkstraGraph` (lecture example, disconnected
+graphs, ties, unknown nodes, single-node graphs) plus integration tests
+that start the real server on an ephemeral port and hit `/api/graph` and
+`/api/route` over real HTTP with `java.net.http.HttpClient`, checking
+status codes, response shape, and that the HTTP layer's answer matches
+calling the graph directly.
+
+## Project layout
+
+```
+src/
+  MapADT.java, PlaceholderMap.java   generic key/value map ADT (hash map backed)
+  GraphADT.java, BaseGraph.java      generic directed weighted graph
+  DijkstraGraph.java                 shortest-path algorithm (priority-queue Dijkstra)
+  RoadNetwork.java                   sample road network: intersections + one-way/two-way roads
+  PathFinderServer.java              HTTP API + static file server
+  Main.java                          entry point
+test/
+  DijkstraGraphTest.java             algorithm unit tests
+  PathFinderServerIntegrationTest.java  end-to-end HTTP integration tests
+web/
+  index.html, style.css, app.js      frontend: form + SVG map
+Makefile
+```
+
+## API
+
+- `GET /api/graph` — all intersections (id, name, lat/lon) and roads
+  (from, to, miles), for rendering the map.
+- `GET /api/route?start=<id>&end=<id>` — shortest path and per-leg
+  distances between two intersection ids. Returns `404` if either id is
+  unknown or no path exists, `400` if a parameter is missing.
+
+## The algorithm
+
+`DijkstraGraph.computeShortestPath` runs Dijkstra's algorithm with a
+`java.util.PriorityQueue` of partial paths ordered by cost so far,
+expanding the lowest-cost frontier node first and stopping as soon as
+the destination is popped. `RoadNetwork` includes a few one-way streets
+specifically so the shortest path can differ depending on direction of
+travel — a plain undirected shortest-path search wouldn't reproduce it.
+
+## Notes to grader (original assignment)
+
+- Name: Charith Reddy Pareddy — CS400, Group P2.2602, Lecture 002.
+- `DijkstraGraph.computeShortestPath` implements the pseudocode from
+  lecture. Everything outside `src/{MapADT,PlaceholderMap,GraphADT,
+  BaseGraph,DijkstraGraph}.java` (the HTTP server, road network data,
+  frontend, and integration tests) was added afterward to turn the
+  assignment into a working application.

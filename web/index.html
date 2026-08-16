@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Path Finder &mdash; Shortest Route Planner</title>
+  <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+  <header>
+    <h1>Path Finder</h1>
+    <p class="subtitle">Shortest-route planning over a small road network, powered by Dijkstra's algorithm.</p>
+  </header>
+
+  <main>
+    <section class="panel controls-panel">
+      <h2>Plan a route</h2>
+      <form id="route-form">
+        <label>
+          Start
+          <select id="start-select" required></select>
+        </label>
+        <label>
+          End
+          <select id="end-select" required></select>
+        </label>
+        <button type="submit">Find shortest route</button>
+      </form>
+      <div id="route-status" class="status"></div>
+      <ol id="route-steps" class="steps"></ol>
+    </section>
+
+    <section class="panel map-panel">
+      <h2>Network map</h2>
+      <svg id="map" viewBox="0 0 640 520" role="img" aria-label="Road network map"></svg>
+    </section>
+  </main>
+
+  <footer>
+    <p>Graph algorithm: Dijkstra's shortest path (see <code>src/DijkstraGraph.java</code>). Java backend served over plain HTTP.</p>
+  </footer>
+
+  <script src="/app.js"></script>
+</body>
+</html>
