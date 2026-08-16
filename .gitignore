@@ -31,3 +31,8 @@ bin/
 ### Build ###
 # Downloaded by `make test`, not a project dependency to track.
 lib/*.jar
+
+### Frontend ###
+frontend/node_modules/
+# Built by `make frontend` (vite build --outDir ../web); frontend/ is the source of truth.
+/web/
