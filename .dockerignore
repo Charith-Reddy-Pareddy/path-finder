@@ -1,0 +1,8 @@
+out/
+lib/
+web/
+frontend/node_modules/
+frontend/dist/
+.git/
+.idea/
+*.iml
