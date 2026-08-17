@@ -17,6 +17,17 @@ actually behaves like a route planner instead of just a test fixture.
 | Testing | JUnit 5 — unit tests for the algorithm, integration tests that drive the real HTTP server end-to-end |
 | Build | `make` — compiles Java, builds the React frontend, downloads the JUnit console launcher, runs tests, runs the app |
 
+## Deployment
+
+Ships as a single Docker image (multi-stage: builds the React frontend,
+compiles the Java backend, then a slim JRE runtime) that reads its port
+from the `PORT` environment variable, so it runs as-is on Render, Cloud
+Run, Fly, or any container platform.
+
+Deployed on [Render](https://render.com) via [render.yaml](render.yaml)
+(a Blueprint — Render reads it automatically and builds straight from
+the `Dockerfile`, redeploying on every push to `main`).
+
 ## Running it
 
 Requires a JDK (21+), Node.js, and `make`.

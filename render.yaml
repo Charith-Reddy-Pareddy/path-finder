@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: path-finder
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    healthCheckPath: /
