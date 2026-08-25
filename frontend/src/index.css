@@ -150,6 +150,39 @@ svg.map {
   stroke-width: 3px;
 }
 
+.legend {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0;
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+
+.legend li {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 3px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+.legend-swatch.road { background: var(--edge); }
+.legend-swatch.route { background: var(--accent); height: 4px; }
+.legend-swatch.endpoint {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #5bffb0;
+}
+
 footer {
   padding: 1.5rem 2rem 2.5rem;
   max-width: 1100px;

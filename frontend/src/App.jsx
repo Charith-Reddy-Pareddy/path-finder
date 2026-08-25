@@ -105,6 +105,11 @@ export default function App() {
         <section className="panel map-panel">
           <h2>Network map</h2>
           <NetworkMap nodes={graph.nodes} edges={graph.edges} path={route?.path.map((p) => p.id) ?? null} />
+          <ul className="legend">
+            <li><span className="legend-swatch road" /> Road</li>
+            <li><span className="legend-swatch route" /> Shortest route</li>
+            <li><span className="legend-swatch endpoint" /> Start / end</li>
+          </ul>
         </section>
       </main>
 

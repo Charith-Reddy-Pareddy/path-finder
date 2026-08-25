@@ -11,6 +11,8 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
@@ -32,6 +34,7 @@ public class PathFinderServer {
   private final RoadNetwork network;
   private final Path webRoot;
   private HttpServer server;
+  private ExecutorService executor;
 
   public PathFinderServer(RoadNetwork network, Path webRoot) {
     this.network = network;
@@ -40,10 +43,15 @@ public class PathFinderServer {
 
   public void start(int port) throws IOException {
     server = HttpServer.create(new InetSocketAddress(port), 0);
+    server.createContext("/api/health", guarded(PathFinderServer::handleHealth));
     server.createContext("/api/graph", guarded(this::handleGraph));
     server.createContext("/api/route", guarded(this::handleRoute));
     server.createContext("/", guarded(this::handleStatic));
-    server.setExecutor(null);
+    // The default executor (null) handles one request at a time on a single
+    // thread -- a slow request blocks every other client. Virtual threads
+    // give each request its own thread at near-zero cost instead.
+    executor = Executors.newVirtualThreadPerTaskExecutor();
+    server.setExecutor(executor);
     server.start();
   }
 
@@ -68,6 +76,10 @@ public class PathFinderServer {
     if (server != null) {
       server.stop(0);
     }
+    // HttpServer.stop() does not shut down a custom executor -- it's ours to close.
+    if (executor != null) {
+      executor.shutdown();
+    }
   }
 
   /** The actual bound port -- useful when started on port 0 for tests. */
@@ -76,6 +88,14 @@ public class PathFinderServer {
   }
 
   // --- API handlers --------------------------------------------------
+
+  private static void handleHealth(HttpExchange exchange) throws IOException {
+    if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
+      sendJson(exchange, 405, Json.error("method not allowed"));
+      return;
+    }
+    sendJson(exchange, 200, "{\"status\":\"ok\"}");
+  }
 
   private void handleGraph(HttpExchange exchange) throws IOException {
     if (!"GET".equalsIgnoreCase(exchange.getRequestMethod())) {
@@ -209,6 +229,11 @@ public class PathFinderServer {
       return;
     }
     exchange.getResponseHeaders().set("Content-Type", contentTypeFor(resolved));
+    // Vite fingerprints filenames under /assets/ (content-hash in the name),
+    // so those are safe to cache forever; index.html must always revalidate
+    // so a new deploy's asset references actually get picked up.
+    exchange.getResponseHeaders().set("Cache-Control",
+        requested.startsWith("/assets/") ? "public, max-age=31536000, immutable" : "no-cache");
     byte[] content = Files.readAllBytes(resolved);
     exchange.sendResponseHeaders(200, content.length);
     try (OutputStream os = exchange.getResponseBody()) {

@@ -7,6 +7,13 @@ import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import org.junit.jupiter.api.AfterAll;
@@ -115,5 +122,48 @@ public class PathFinderServerIntegrationTest {
     HttpResponse<String> resp = get("/");
     assertEquals(200, resp.statusCode());
     assertTrue(resp.body().contains("<html"));
+  }
+
+  @Test
+  public void healthEndpointReportsOk() throws Exception {
+    HttpResponse<String> resp = get("/api/health");
+    assertEquals(200, resp.statusCode());
+    assertTrue(resp.body().contains("\"status\":\"ok\""));
+  }
+
+  @Test
+  public void hashedAssetsAreCachedForeverButIndexHtmlIsNot() throws Exception {
+    HttpResponse<String> index = get("/");
+    assertEquals("no-cache", index.headers().firstValue("Cache-Control").orElse(null));
+
+    Matcher assetRef = Pattern.compile("/assets/[^\"]+\\.js").matcher(index.body());
+    assertTrue(assetRef.find(), "expected index.html to reference a hashed JS asset: " + index.body());
+
+    HttpResponse<String> asset = get(assetRef.group());
+    assertEquals(200, asset.statusCode());
+    assertEquals("public, max-age=31536000, immutable", asset.headers().firstValue("Cache-Control").orElse(null));
+  }
+
+  @Test
+  public void handlesConcurrentRequestsWithoutSerializing() throws Exception {
+    // Regression test for server.setExecutor(null), which processes one
+    // request at a time on a single thread -- with that bug, this many
+    // concurrent requests would take far longer than the assertion below.
+    int concurrency = 20;
+    ExecutorService pool = Executors.newFixedThreadPool(concurrency);
+    List<Callable<HttpResponse<String>>> tasks = new ArrayList<>();
+    for (int i = 0; i < concurrency; i++) {
+      tasks.add(() -> get("/api/route?start=capitol&end=camp_randall"));
+    }
+
+    long startNanos = System.nanoTime();
+    List<Future<HttpResponse<String>>> results = pool.invokeAll(tasks);
+    long elapsedMs = (System.nanoTime() - startNanos) / 1_000_000;
+    pool.shutdown();
+
+    for (Future<HttpResponse<String>> result : results) {
+      assertEquals(200, result.get().statusCode());
+    }
+    assertTrue(elapsedMs < 5000, concurrency + " concurrent requests took " + elapsedMs + "ms -- looks serialized");
   }
 }

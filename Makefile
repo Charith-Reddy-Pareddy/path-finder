@@ -12,23 +12,29 @@ JUNIT_URL := https://repo1.maven.org/maven2/org/junit/platform/junit-platform-co
 FRONTEND_DIR := frontend
 WEB_DIR := web
 
-.PHONY: build frontend test run clean
+.PHONY: build frontend-install frontend frontend-test test run clean
 
 build:
 	mkdir -p $(CLASSES)
 	javac -d $(CLASSES) $(SRC_DIR)/*.java
 
+frontend-install:
+	cd $(FRONTEND_DIR) && npm ci
+
 # React (Vite) frontend -- builds into ../web (see frontend/vite.config.js),
 # which PathFinderServer serves as static files.
-frontend:
-	cd $(FRONTEND_DIR) && npm ci && npm run build
+frontend: frontend-install
+	cd $(FRONTEND_DIR) && npm run build
+
+frontend-test: frontend-install
+	cd $(FRONTEND_DIR) && npm test
 
 $(JUNIT_JAR):
 	mkdir -p $(LIB_DIR)
 	curl -sL -o $(JUNIT_JAR) $(JUNIT_URL)
 
 # Depends on frontend too: the static-file integration test expects a real web/index.html.
-test: build frontend $(JUNIT_JAR)
+test: build frontend frontend-test $(JUNIT_JAR)
 	mkdir -p $(TEST_CLASSES)
 	javac -cp "$(CLASSES):$(JUNIT_JAR)" -d $(TEST_CLASSES) $(TEST_DIR)/*.java
 	java -jar $(JUNIT_JAR) execute -cp "$(CLASSES):$(TEST_CLASSES)" --scan-classpath --details=tree
