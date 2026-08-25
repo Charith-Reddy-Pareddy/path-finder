@@ -88,6 +88,20 @@ button {
 
 button:hover { opacity: 0.9; }
 
+button:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.swap-button {
+  align-self: flex-start;
+  background: transparent;
+  border: 1px solid var(--border);
+  color: var(--muted);
+  font-weight: 500;
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+}
+
+.swap-button:hover { opacity: 1; color: var(--text); border-color: var(--muted); }
+
 .status {
   margin-top: 0.9rem;
   font-size: 0.85rem;

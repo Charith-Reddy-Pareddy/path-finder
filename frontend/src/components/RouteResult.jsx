@@ -1,7 +1,9 @@
 export default function RouteResult({ statusType, statusMessage, route, nodesById }) {
   return (
     <>
-      <div className={statusType === 'error' ? 'status error' : 'status'}>{statusMessage}</div>
+      <div className={statusType === 'error' ? 'status error' : 'status'} role="status" aria-live="polite">
+        {statusMessage}
+      </div>
       {route && (
         <ol className="steps">
           {route.segments.map((segment, i) => {

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { getGraph, getRoute } from './api';
 import RouteForm from './components/RouteForm';
 import RouteResult from './components/RouteResult';
@@ -14,14 +14,22 @@ export default function App() {
 
   const nodesById = useMemo(() => new Map(graph.nodes.map((n) => [n.id, n])), [graph.nodes]);
 
+  // Guards against out-of-order responses: if a second search starts before
+  // the first one resolves, only the response matching the latest request
+  // should ever be applied to state.
+  const latestRequestId = useRef(0);
+
   const findRoute = useCallback(async (start, end) => {
+    const requestId = ++latestRequestId.current;
     setStatus({ type: 'loading', message: 'Calculating route...' });
     setRoute(null);
     try {
       const result = await getRoute(start, end);
+      if (requestId !== latestRequestId.current) return;
       setRoute(result);
       setStatus({ type: 'success', message: `Shortest route found: ${result.path.length} stop(s).` });
     } catch (err) {
+      if (requestId !== latestRequestId.current) return;
       setStatus({ type: 'error', message: err.message });
     }
   }, []);
@@ -52,6 +60,12 @@ export default function App() {
     findRoute(startId, endId);
   }
 
+  function handleSwap() {
+    setStartId(endId);
+    setEndId(startId);
+    findRoute(endId, startId);
+  }
+
   const networkLoaded = graph.nodes.length > 0;
 
   return (
@@ -75,6 +89,8 @@ export default function App() {
                 onStartChange={setStartId}
                 onEndChange={setEndId}
                 onSubmit={handleSubmit}
+                onSwap={handleSwap}
+                loading={status.type === 'loading'}
               />
               <RouteResult
                 statusType={status.type}

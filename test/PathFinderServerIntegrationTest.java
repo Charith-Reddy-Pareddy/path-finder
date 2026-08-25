@@ -65,13 +65,28 @@ public class PathFinderServerIntegrationTest {
   public void routeEndpointMatchesDirectAlgorithmResult() throws Exception {
     // Cross-check the HTTP layer against calling the algorithm directly,
     // so this test catches wiring/serialization bugs, not just algorithm bugs.
-    double expectedCost = network.graph().shortestPathCost("capitol", "camp_randall");
+    // Rounded the same way PathFinderServer rounds for display -- see
+    // floatingPointSummationNoiseIsRoundedAway below for why that matters.
+    double expectedCost = Math.round(network.graph().shortestPathCost("capitol", "camp_randall") * 100.0) / 100.0;
 
     HttpResponse<String> resp = get("/api/route?start=capitol&end=camp_randall");
     assertEquals(200, resp.statusCode());
     assertTrue(resp.body().contains("\"totalMiles\":" + Json.number(expectedCost)));
     assertTrue(resp.body().contains("\"id\":\"capitol\""));
     assertTrue(resp.body().contains("\"id\":\"camp_randall\""));
+  }
+
+  @Test
+  public void floatingPointSummationNoiseIsRoundedAway() throws Exception {
+    // bascom_hill -> camp_randall is a one-way street, so the reverse route
+    // has to go the long way around: 0.6 + 0.5 + 0.25 + 0.35 miles, which
+    // sums in IEEE 754 double arithmetic to 1.7000000000000002, not 1.7.
+    // The server should round that for display instead of leaking it.
+    HttpResponse<String> resp = get("/api/route?start=camp_randall&end=bascom_hill");
+    assertEquals(200, resp.statusCode());
+    assertTrue(resp.body().contains("\"totalMiles\":1.7"),
+        "expected a clean 1.7, got: " + resp.body());
+    assertTrue(!resp.body().contains("000000"), "response leaked floating-point noise: " + resp.body());
   }
 
   @Test

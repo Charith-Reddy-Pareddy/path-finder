@@ -40,11 +40,28 @@ public class PathFinderServer {
 
   public void start(int port) throws IOException {
     server = HttpServer.create(new InetSocketAddress(port), 0);
-    server.createContext("/api/graph", this::handleGraph);
-    server.createContext("/api/route", this::handleRoute);
-    server.createContext("/", this::handleStatic);
+    server.createContext("/api/graph", guarded(this::handleGraph));
+    server.createContext("/api/route", guarded(this::handleRoute));
+    server.createContext("/", guarded(this::handleStatic));
     server.setExecutor(null);
     server.start();
+  }
+
+  /**
+   * Wraps a handler so an unexpected exception becomes a clean 500 JSON
+   * response instead of a broken/empty connection -- the JDK's HttpServer
+   * doesn't do this itself, it just logs to stderr and drops the exchange.
+   */
+  private static HttpHandler guarded(HttpHandler handler) {
+    return exchange -> {
+      try {
+        handler.handle(exchange);
+      } catch (Exception e) {
+        System.err.println("Unhandled error handling " + exchange.getRequestURI() + ": " + e);
+        e.printStackTrace();
+        sendJson(exchange, 500, Json.error("internal server error"));
+      }
+    };
   }
 
   public void stop() {
@@ -113,7 +130,10 @@ public class PathFinderServer {
 
     try {
       List<String> path = network.graph().shortestPathData(start, end);
-      double cost = network.graph().shortestPathCost(start, end);
+      // Dijkstra accumulates cost as a running sum of edge weights, which can
+      // land a hair off a "clean" decimal (e.g. 1.7000000000000002) due to
+      // binary floating-point rounding -- round for display, not just for looks.
+      double cost = round2(network.graph().shortestPathCost(start, end));
 
       List<String> pathEntries = new ArrayList<>();
       List<String> segmentEntries = new ArrayList<>();
@@ -121,7 +141,7 @@ public class PathFinderServer {
         String id = path.get(i);
         pathEntries.add("{\"id\":" + Json.string(id) + ",\"name\":" + Json.string(network.nameOf(id)) + "}");
         if (i < path.size() - 1) {
-          double legMiles = network.graph().getEdge(id, path.get(i + 1));
+          double legMiles = round2(network.graph().getEdge(id, path.get(i + 1)));
           segmentEntries.add("{\"from\":" + Json.string(id)
               + ",\"to\":" + Json.string(path.get(i + 1))
               + ",\"miles\":" + Json.number(legMiles) + "}");
@@ -135,6 +155,10 @@ public class PathFinderServer {
     } catch (NoSuchElementException e) {
       sendJson(exchange, 404, Json.error("no route found between those intersections"));
     }
+  }
+
+  private static double round2(double d) {
+    return Math.round(d * 100.0) / 100.0;
   }
 
   private static Map<String, String> parseQuery(String rawQuery) {

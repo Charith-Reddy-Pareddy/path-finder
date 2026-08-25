@@ -1,4 +1,4 @@
-export default function RouteForm({ nodes, startId, endId, onStartChange, onEndChange, onSubmit }) {
+export default function RouteForm({ nodes, startId, endId, onStartChange, onEndChange, onSubmit, onSwap, loading }) {
   const sorted = [...nodes].sort((a, b) => a.name.localeCompare(b.name));
 
   return (
@@ -13,6 +13,9 @@ export default function RouteForm({ nodes, startId, endId, onStartChange, onEndC
           ))}
         </select>
       </label>
+      <button type="button" className="swap-button" onClick={onSwap} aria-label="Swap start and end">
+        ⇅ Swap
+      </button>
       <label>
         End
         <select value={endId} onChange={(e) => onEndChange(e.target.value)} required>
@@ -23,7 +26,9 @@ export default function RouteForm({ nodes, startId, endId, onStartChange, onEndC
           ))}
         </select>
       </label>
-      <button type="submit">Find shortest route</button>
+      <button type="submit" disabled={loading}>
+        {loading ? 'Calculating...' : 'Find shortest route'}
+      </button>
     </form>
   );
 }
