@@ -14,7 +14,7 @@ actually behaves like a route planner instead of just a test fixture.
 | Graph engine | Java 21 — generic `DijkstraGraph<NodeType, EdgeType>` over a custom hash-map ADT |
 | Backend | Java's built-in `com.sun.net.httpserver` (no framework), plain JSON over HTTP |
 | Frontend | React 19 + Vite — fetches the API and renders an interactive SVG map ([frontend/](frontend/)) |
-| Testing | JUnit 5 — unit tests for the algorithm, integration tests that drive the real HTTP server end-to-end |
+| Testing | JUnit 5 (backend) + Vitest/React Testing Library (frontend) |
 | Build | `make` — compiles Java, builds the React frontend, downloads the JUnit console launcher, runs tests, runs the app |
 
 ## Deployment
@@ -55,15 +55,15 @@ separately-running backend), see [frontend/README.md](frontend/README.md).
 make test
 ```
 
-This builds the React frontend, compiles the Java sources, downloads the
+Runs both suites. Backend: `javac`s the Java sources, downloads the
 JUnit Platform Console Standalone launcher into `lib/` on first run
-(cached after that), and runs the full suite: unit tests for
-`DijkstraGraph` (lecture example, disconnected graphs, ties, unknown
-nodes, single-node graphs) plus integration tests that start the real
-server on an ephemeral port and hit `/api/graph` and `/api/route` over
-real HTTP with `java.net.http.HttpClient`, checking status codes,
-response shape, and that the HTTP layer's answer matches calling the
-graph directly.
+(cached after that), and runs unit tests for `DijkstraGraph` plus
+integration tests that start the real server on an ephemeral port and
+drive it over real HTTP with `java.net.http.HttpClient` — status codes,
+response shape, cache headers, that a burst of concurrent requests
+doesn't serialize, and that the HTTP layer's answer matches calling the
+graph directly. Frontend: Vitest + React Testing Library, covering
+`RouteForm`, `NetworkMap`, `api.js`, and the `ErrorBoundary`.
 
 ## Project layout
 
@@ -91,6 +91,11 @@ Makefile
 - `GET /api/route?start=<id>&end=<id>` — shortest path and per-leg
   distances between two intersection ids. Returns `404` if either id is
   unknown or no path exists, `400` if a parameter is missing.
+- `GET /api/health` — liveness check, used by Render's health check.
+
+The server handles each request on its own virtual thread
+(`Executors.newVirtualThreadPerTaskExecutor()`) rather than the JDK
+default of one request at a time.
 
 ## The algorithm
 
