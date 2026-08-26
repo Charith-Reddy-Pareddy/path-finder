@@ -1,5 +1,7 @@
 # Path Finder
 
+[![CI](https://github.com/Charith-Reddy-Pareddy/path-finder/actions/workflows/ci.yml/badge.svg)](https://github.com/Charith-Reddy-Pareddy/path-finder/actions/workflows/ci.yml)
+
 A route-planning web app: pick a start and end intersection in a small
 sample road network and get the shortest route, computed with Dijkstra's
 algorithm. Originally a UW-Madison CS400 (data structures) assignment
